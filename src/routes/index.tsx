@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ArrowUpRight, ArrowRight } from "lucide-react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,16 +31,23 @@ const stats = [
   { value: "9", label: "Awards" },
 ];
 
-const services = [
-  { n: "01", t: "Brand Identity", d: "Names, logos and systems that scale across every surface." },
-  { n: "02", t: "Product Design", d: "Interfaces engineered for clarity, speed and conversion." },
-  { n: "03", t: "Web Platforms", d: "Performance-driven marketing sites and full applications." },
-  { n: "04", t: "Motion & 3D", d: "Cinematic animation that elevates the entire experience." },
-];
+type ServicePreview = { id: string; number: string; title: string; description: string };
 
 const clients = ["NORTHWIND", "VANTA", "AURIC", "MERIDIAN", "HALCYON", "OBSCURA"];
 
 function HomePage() {
+  const [services, setServices] = useState<ServicePreview[]>([]);
+
+  useEffect(() => {
+    void supabase
+      .from("services")
+      .select("id, number, title, description")
+      .eq("published", true)
+      .order("sort_order", { ascending: true })
+      .limit(4)
+      .then(({ data }) => setServices((data ?? []) as ServicePreview[]));
+  }, []);
+
   const root = useGsap<HTMLDivElement>((_, el) => {
     const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
     tl.from(el.querySelectorAll(".hero-line"), {
@@ -173,12 +182,12 @@ function HomePage() {
           <div className="grid gap-px bg-border sm:grid-cols-2">
             {services.map((s) => (
               <div
-                key={s.n}
+                key={s.id}
                 className="svc-card group relative bg-background p-8 transition-colors hover:bg-card"
               >
-                <p className="font-mono text-xs text-primary">{s.n}</p>
-                <h3 className="mt-6 font-display text-2xl font-semibold">{s.t}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
+                <p className="font-mono text-xs text-primary">{s.number}</p>
+                <h3 className="mt-6 font-display text-2xl font-semibold">{s.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{s.description}</p>
                 <ArrowUpRight className="absolute right-6 top-6 h-4 w-4 text-muted-foreground transition-all group-hover:text-primary group-hover:-translate-y-1 group-hover:translate-x-1" />
               </div>
             ))}

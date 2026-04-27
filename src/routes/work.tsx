@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/work")({
   head: () => ({
@@ -18,58 +20,28 @@ export const Route = createFileRoute("/work")({
   component: WorkPage,
 });
 
-const projects = [
-  {
-    n: "01",
-    title: "Northwind",
-    tag: "Fintech · Brand + Product",
-    year: "2024",
-    summary: "Repositioning a legacy bank for a new generation. New identity, new app, new everything.",
-    accent: "from-red-500/40 to-red-900/10",
-  },
-  {
-    n: "02",
-    title: "Vanta Aerospace",
-    tag: "Aerospace · Web Platform",
-    year: "2024",
-    summary: "An interactive marketing platform for a stealth-stage aerospace company.",
-    accent: "from-orange-500/30 to-red-900/10",
-  },
-  {
-    n: "03",
-    title: "Auric Labs",
-    tag: "Biotech · Identity",
-    year: "2023",
-    summary: "Visual system for a precision diagnostics lab — clinical, exact, unmistakable.",
-    accent: "from-rose-500/30 to-red-900/10",
-  },
-  {
-    n: "04",
-    title: "Meridian OS",
-    tag: "SaaS · Product Design",
-    year: "2023",
-    summary: "End-to-end product design for an operations platform used by thousands of teams.",
-    accent: "from-red-700/30 to-red-950/10",
-  },
-  {
-    n: "05",
-    title: "Halcyon",
-    tag: "Hospitality · Brand + Site",
-    year: "2022",
-    summary: "Brand and immersive site for a boutique hotel collection across four cities.",
-    accent: "from-pink-500/20 to-red-900/10",
-  },
-  {
-    n: "06",
-    title: "Obscura Camera",
-    tag: "DTC · Brand + Commerce",
-    year: "2022",
-    summary: "A film camera revival, from product design through to direct-to-consumer launch.",
-    accent: "from-amber-500/20 to-red-900/10",
-  },
-];
+type ProjectRow = {
+  id: string;
+  number: string;
+  title: string;
+  tag: string;
+  year: string;
+  summary: string;
+  accent: string;
+};
 
 function WorkPage() {
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+
+  useEffect(() => {
+    void supabase
+      .from("projects")
+      .select("id, number, title, tag, year, summary, accent")
+      .eq("published", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => setProjects((data ?? []) as ProjectRow[]));
+  }, []);
+
   const root = useGsap<HTMLDivElement>((_, el) => {
     gsap.from(el.querySelectorAll(".reveal"), {
       opacity: 0,
@@ -86,7 +58,7 @@ function WorkPage() {
       ease: "power3.out",
       scrollTrigger: { trigger: el.querySelector("#projects"), start: "top 80%" },
     });
-  });
+  }, [projects.length]);
 
   return (
     <div ref={root}>
@@ -107,7 +79,7 @@ function WorkPage() {
         <div className="grid gap-8 md:grid-cols-2">
           {projects.map((p) => (
             <article
-              key={p.n}
+              key={p.id}
               className="project-card group relative cursor-pointer overflow-hidden rounded-xl border border-border bg-card hover-lift"
             >
               <div className={`relative aspect-[4/3] bg-gradient-to-br ${p.accent} overflow-hidden`}>
@@ -132,6 +104,11 @@ function WorkPage() {
               </div>
             </article>
           ))}
+          {projects.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border p-10 text-sm text-muted-foreground md:col-span-2">
+              No projects published yet.
+            </div>
+          )}
         </div>
       </section>
     </div>

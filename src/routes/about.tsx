@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -24,14 +26,20 @@ const principles = [
   { n: "04", t: "Built to last", d: "Decisions that hold up years after launch." },
 ];
 
-const team = [
-  { name: "Mara Chen", role: "Founder · Creative Director" },
-  { name: "Idris Wolfe", role: "Design Lead" },
-  { name: "Sora Petrov", role: "Engineering Lead" },
-  { name: "Nia Okafor", role: "Brand Strategist" },
-];
+type TeamMember = { id: string; name: string; role: string };
 
 function AboutPage() {
+  const [team, setTeam] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    void supabase
+      .from("team_members")
+      .select("id, name, role")
+      .eq("published", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => setTeam((data ?? []) as TeamMember[]));
+  }, []);
+
   const root = useGsap<HTMLDivElement>((_, el) => {
     gsap.from(el.querySelectorAll(".reveal"), {
       opacity: 0,
@@ -40,7 +48,7 @@ function AboutPage() {
       stagger: 0.06,
       ease: "power3.out",
     });
-  });
+  }, [team.length]);
 
   return (
     <div ref={root}>
@@ -96,7 +104,7 @@ function AboutPage() {
           </div>
           <div className="grid gap-px bg-border sm:grid-cols-2">
             {team.map((m) => (
-              <div key={m.name} className="reveal bg-background p-8">
+              <div key={m.id} className="reveal bg-background p-8">
                 <div className="aspect-square rounded-lg bg-gradient-brand opacity-80 elegant-shadow" />
                 <p className="mt-6 font-display text-xl font-semibold">{m.name}</p>
                 <p className="mt-1 font-mono text-xs uppercase tracking-wider text-muted-foreground">
@@ -104,6 +112,11 @@ function AboutPage() {
                 </p>
               </div>
             ))}
+            {team.length === 0 && (
+              <div className="bg-background p-8 text-sm text-muted-foreground sm:col-span-2">
+                Team coming soon.
+              </div>
+            )}
           </div>
         </div>
       </section>
