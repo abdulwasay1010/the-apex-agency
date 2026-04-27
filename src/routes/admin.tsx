@@ -69,9 +69,7 @@ function AdminLayout() {
           <Logo className="mb-6" />
           <nav className="space-y-1">
             {nav.map((n) => {
-              const active = n.exact ? path === n.to : path.startsWith(n.to) && n.to !== "/admin";
-              const isOverview = n.to === "/admin" && path === "/admin";
-              const on = active || isOverview;
+              const on = n.exact ? path === n.to : path.startsWith(n.to);
               return (
                 <Link
                   key={n.to}
