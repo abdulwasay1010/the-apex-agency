@@ -32,13 +32,17 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Apex — Digital Studio for Ambitious Brands" },
+      { title: "Apex — Digital Agency" },
       { name: "description", content: "Apex is a sleek digital studio designing brands, products and platforms with precision." },
       { name: "author", content: "Apex Studio" },
-      { property: "og:title", content: "Apex — Digital Studio" },
-      { property: "og:description", content: "Brands, products and platforms designed with precision." },
+      { property: "og:title", content: "Apex — Digital Agency" },
+      { property: "og:description", content: "Apex is a sleek digital studio designing brands, products and platforms with precision." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Apex — Digital Agency" },
+      { name: "twitter:description", content: "Apex is a sleek digital studio designing brands, products and platforms with precision." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/1aa6fad2-bb33-45d6-8e6f-ab4ca0d2cbd0" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/1aa6fad2-bb33-45d6-8e6f-ab4ca0d2cbd0" },
     ],
     links: [
       {
