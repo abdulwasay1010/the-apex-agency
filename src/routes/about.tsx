@@ -104,7 +104,7 @@ function AboutPage() {
           </div>
           <div className="grid gap-px bg-border sm:grid-cols-2">
             {team.map((m) => (
-              <div key={m.name} className="reveal bg-background p-8">
+              <div key={m.id} className="reveal bg-background p-8">
                 <div className="aspect-square rounded-lg bg-gradient-brand opacity-80 elegant-shadow" />
                 <p className="mt-6 font-display text-xl font-semibold">{m.name}</p>
                 <p className="mt-1 font-mono text-xs uppercase tracking-wider text-muted-foreground">
@@ -112,6 +112,11 @@ function AboutPage() {
                 </p>
               </div>
             ))}
+            {team.length === 0 && (
+              <div className="bg-background p-8 text-sm text-muted-foreground sm:col-span-2">
+                Team coming soon.
+              </div>
+            )}
           </div>
         </div>
       </section>
