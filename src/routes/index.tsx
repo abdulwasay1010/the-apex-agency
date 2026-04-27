@@ -95,11 +95,6 @@ function HomePage() {
     });
   });
 
-  // Lazy register ScrollTrigger
-  if (typeof window !== "undefined") {
-    void import("gsap/ScrollTrigger").then((m) => gsap.registerPlugin(m.ScrollTrigger));
-  }
-
   return (
     <div ref={root}>
       {/* Hero */}

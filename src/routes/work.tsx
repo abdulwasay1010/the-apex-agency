@@ -78,16 +78,13 @@ function WorkPage() {
       stagger: 0.06,
       ease: "power3.out",
     });
-    void import("gsap/ScrollTrigger").then((m) => {
-      gsap.registerPlugin(m.ScrollTrigger);
-      gsap.from(el.querySelectorAll(".project-card"), {
-        opacity: 0,
-        y: 60,
-        duration: 0.9,
-        stagger: 0.1,
-        ease: "power3.out",
-        scrollTrigger: { trigger: el.querySelector("#projects"), start: "top 80%" },
-      });
+    gsap.from(el.querySelectorAll(".project-card"), {
+      opacity: 0,
+      y: 60,
+      duration: 0.9,
+      stagger: 0.1,
+      ease: "power3.out",
+      scrollTrigger: { trigger: el.querySelector("#projects"), start: "top 80%" },
     });
   });
 
