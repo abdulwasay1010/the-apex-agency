@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/services")({
   head: () => ({
@@ -21,46 +23,26 @@ export const Route = createFileRoute("/services")({
   component: ServicesPage,
 });
 
-const services = [
-  {
-    n: "01",
-    t: "Brand Identity",
-    d: "Strategic positioning, naming, visual systems and guidelines that hold up across every surface and scale.",
-    items: ["Strategy & positioning", "Naming & verbal identity", "Logo & visual system", "Brand guidelines"],
-  },
-  {
-    n: "02",
-    t: "Product Design",
-    d: "Interfaces engineered for clarity, speed and conversion. From early concepts to launch-ready design systems.",
-    items: ["UX research & flows", "UI design", "Design systems", "Prototyping"],
-  },
-  {
-    n: "03",
-    t: "Web Platforms",
-    d: "Performance-driven marketing sites and full applications, built with modern stacks and meticulous craft.",
-    items: ["Marketing sites", "Web applications", "CMS integration", "Performance & SEO"],
-  },
-  {
-    n: "04",
-    t: "Motion & 3D",
-    d: "Cinematic animation, interaction design and 3D direction that elevates the entire product experience.",
-    items: ["UI motion", "Brand films", "3D direction", "Interactive prototypes"],
-  },
-  {
-    n: "05",
-    t: "Strategy",
-    d: "Workshops and audits that align teams around a sharp creative direction before a single pixel is drawn.",
-    items: ["Brand audits", "Workshops", "Creative direction", "Roadmapping"],
-  },
-  {
-    n: "06",
-    t: "Engineering",
-    d: "Production-grade frontend engineering, accessible by default, performant by design, maintainable forever.",
-    items: ["React & TypeScript", "Headless CMS", "Component libraries", "DX tooling"],
-  },
-];
+type ServiceRow = {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  items: string[];
+};
 
 function ServicesPage() {
+  const [services, setServices] = useState<ServiceRow[]>([]);
+
+  useEffect(() => {
+    void supabase
+      .from("services")
+      .select("id, number, title, description, items")
+      .eq("published", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => setServices((data ?? []) as ServiceRow[]));
+  }, []);
+
   const root = useGsap<HTMLDivElement>((_, el) => {
     gsap.from(el.querySelectorAll(".reveal"), {
       opacity: 0,
@@ -69,7 +51,7 @@ function ServicesPage() {
       stagger: 0.06,
       ease: "power3.out",
     });
-  });
+  }, [services.length]);
 
   return (
     <div ref={root}>
@@ -93,21 +75,21 @@ function ServicesPage() {
         <div className="grid gap-px bg-border md:grid-cols-2">
           {services.map((s) => (
             <article
-              key={s.n}
+              key={s.id}
               className="reveal group bg-background p-10 transition-colors hover:bg-card"
             >
               <div className="flex items-start justify-between">
-                <p className="font-mono text-xs text-primary">{s.n}</p>
+                <p className="font-mono text-xs text-primary">{s.number}</p>
                 <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
                   Service
                 </span>
               </div>
               <h2 className="mt-8 font-display text-3xl font-semibold tracking-tight">
-                {s.t}
+                {s.title}
               </h2>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{s.description}</p>
               <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-6 text-sm">
-                {s.items.map((i) => (
+                {(s.items ?? []).map((i) => (
                   <li key={i} className="flex items-center gap-2 text-muted-foreground">
                     <span className="text-primary">—</span> {i}
                   </li>
@@ -115,6 +97,11 @@ function ServicesPage() {
               </ul>
             </article>
           ))}
+          {services.length === 0 && (
+            <div className="bg-background p-10 text-sm text-muted-foreground">
+              No services yet.
+            </div>
+          )}
         </div>
       </section>
     </div>
