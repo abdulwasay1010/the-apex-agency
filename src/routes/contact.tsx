@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowUpRight, Loader2 } from "lucide-react";
@@ -43,7 +43,7 @@ function ContactPage() {
     });
   });
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const raw = {
@@ -174,7 +174,7 @@ function Field({
   );
 }
 
-function Block({ label, children }: { label: string; children: React.ReactNode }) {
+function Block({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="border-l border-primary/60 pl-4">
       <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
