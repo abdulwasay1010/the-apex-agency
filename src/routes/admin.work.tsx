@@ -85,8 +85,9 @@ function WorkAdmin() {
             <thead>
               <tr className="border-b border-border text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Image</th>
                 <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Tag</th>
+                <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Year</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3" />
@@ -96,8 +97,15 @@ function WorkAdmin() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-border/60 last:border-0">
                   <td className="px-4 py-4 font-mono text-xs text-primary">{r.number}</td>
+                  <td className="px-4 py-4">
+                    {r.image_url ? (
+                      <img src={r.image_url} alt={r.title} className="h-10 w-14 rounded object-cover" />
+                    ) : (
+                      <div className="h-10 w-14 rounded bg-muted" />
+                    )}
+                  </td>
                   <td className="px-4 py-4 font-medium">{r.title}</td>
-                  <td className="px-4 py-4 text-muted-foreground">{r.tag}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{r.category}</td>
                   <td className="px-4 py-4 font-mono text-xs">{r.year}</td>
                   <td className="px-4 py-4"><Badge on={r.published} /></td>
                   <td className="px-4 py-4 text-right">
