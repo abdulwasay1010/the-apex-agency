@@ -19,7 +19,6 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { session, isAdmin, loading } = useAuth();
-  const [mode, setMode] = useState<"login" | "signup">("login");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -38,20 +37,10 @@ function AuthPage() {
       return;
     }
     setBusy(true);
-    if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) toast.error(error.message);
-      else toast.success("Signed in.");
-    } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/admin` },
-      });
-      if (error) toast.error(error.message);
-      else toast.success("Account created. Check your email to verify.");
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success("Signed in.");
   }
 
   return (
@@ -60,9 +49,7 @@ function AuthPage() {
         <Link to="/" className="font-mono text-xs uppercase tracking-[0.3em] text-muted-foreground">
           ← Back to site
         </Link>
-        <h1 className="mt-8 font-display text-4xl font-semibold tracking-tight">
-          {mode === "login" ? "Sign in" : "Create account"}
-        </h1>
+        <h1 className="mt-8 font-display text-4xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           Admin access only. Contact the studio for an invite.
         </p>
@@ -88,16 +75,9 @@ function AuthPage() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all hover:opacity-90 disabled:opacity-60 glow-shadow"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {mode === "login" ? "Sign in" : "Create account"}
+            Sign in
           </button>
         </form>
-        <button
-          type="button"
-          onClick={() => setMode((m) => (m === "login" ? "signup" : "login"))}
-          className="mt-6 text-sm text-muted-foreground hover:text-foreground"
-        >
-          {mode === "login" ? "Need an account? Sign up" : "Have an account? Sign in"}
-        </button>
       </div>
     </div>
   );
