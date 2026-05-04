@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AdminPageHeader,
@@ -22,6 +22,9 @@ type Project = {
   accent: string;
   sort_order: number;
   published: boolean;
+  category: string;
+  image_url: string | null;
+  view_url: string | null;
 };
 
 export const Route = createFileRoute("/admin/work")({
@@ -82,8 +85,9 @@ function WorkAdmin() {
             <thead>
               <tr className="border-b border-border text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Image</th>
                 <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Tag</th>
+                <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Year</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3" />
@@ -93,8 +97,15 @@ function WorkAdmin() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-border/60 last:border-0">
                   <td className="px-4 py-4 font-mono text-xs text-primary">{r.number}</td>
+                  <td className="px-4 py-4">
+                    {r.image_url ? (
+                      <img src={r.image_url} alt={r.title} className="h-10 w-14 rounded object-cover" />
+                    ) : (
+                      <div className="h-10 w-14 rounded bg-muted" />
+                    )}
+                  </td>
                   <td className="px-4 py-4 font-medium">{r.title}</td>
-                  <td className="px-4 py-4 text-muted-foreground">{r.tag}</td>
+                  <td className="px-4 py-4 text-muted-foreground">{r.category}</td>
                   <td className="px-4 py-4 font-mono text-xs">{r.year}</td>
                   <td className="px-4 py-4"><Badge on={r.published} /></td>
                   <td className="px-4 py-4 text-right">
@@ -146,6 +157,28 @@ function ProjectFormModal({
   onSaved: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(initial?.image_url ?? null);
+
+  async function onUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("project-images").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      const { data } = supabase.storage.from("project-images").getPublicUrl(path);
+      setImageUrl(data.publicUrl);
+      toast.success("Image uploaded.");
+    }
+    setUploading(false);
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -159,6 +192,9 @@ function ProjectFormModal({
       accent: String(fd.get("accent") ?? "from-red-500/40 to-red-900/10").trim(),
       sort_order: Number(fd.get("sort_order") ?? 0),
       published: fd.get("published") === "on",
+      category: String(fd.get("category") ?? "General").trim() || "General",
+      view_url: String(fd.get("view_url") ?? "").trim() || null,
+      image_url: imageUrl,
     };
 
     setBusy(true);
@@ -182,10 +218,36 @@ function ProjectFormModal({
           <AdminInput label="Title" name="title" required defaultValue={initial?.title} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
+          <AdminInput label="Category" name="category" required defaultValue={initial?.category ?? "General"} placeholder="Branding" />
           <AdminInput label="Tag" name="tag" required defaultValue={initial?.tag} placeholder="Fintech · Brand + Product" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <AdminInput label="Year" name="year" required defaultValue={initial?.year} placeholder="2024" />
+          <AdminInput label="View URL" name="view_url" type="url" defaultValue={initial?.view_url ?? ""} placeholder="https://..." />
         </div>
         <AdminTextarea label="Summary" name="summary" required rows={3} defaultValue={initial?.summary} />
+
+        <div>
+          <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Cover image</span>
+          <div className="mt-2 flex items-center gap-4">
+            {imageUrl ? (
+              <img src={imageUrl} alt="" className="h-20 w-28 rounded-md object-cover border border-border" />
+            ) : (
+              <div className="h-20 w-28 rounded-md border border-dashed border-border bg-muted/30" />
+            )}
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:border-primary/60">
+              {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+              {uploading ? "Uploading..." : imageUrl ? "Replace image" : "Upload image"}
+              <input type="file" accept="image/*" className="hidden" onChange={onUpload} disabled={uploading} />
+            </label>
+            {imageUrl && (
+              <button type="button" onClick={() => setImageUrl(null)} className="text-xs text-destructive hover:underline">
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+
         <AdminInput
           label="Accent gradient (Tailwind)"
           name="accent"

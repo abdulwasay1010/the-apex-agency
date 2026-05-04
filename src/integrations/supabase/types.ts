@@ -44,8 +44,10 @@ export type Database = {
       projects: {
         Row: {
           accent: string
+          category: string
           created_at: string
           id: string
+          image_url: string | null
           number: string
           published: boolean
           sort_order: number
@@ -53,12 +55,15 @@ export type Database = {
           tag: string
           title: string
           updated_at: string
+          view_url: string | null
           year: string
         }
         Insert: {
           accent?: string
+          category?: string
           created_at?: string
           id?: string
+          image_url?: string | null
           number: string
           published?: boolean
           sort_order?: number
@@ -66,12 +71,15 @@ export type Database = {
           tag: string
           title: string
           updated_at?: string
+          view_url?: string | null
           year: string
         }
         Update: {
           accent?: string
+          category?: string
           created_at?: string
           id?: string
+          image_url?: string | null
           number?: string
           published?: boolean
           sort_order?: number
@@ -79,6 +87,7 @@ export type Database = {
           tag?: string
           title?: string
           updated_at?: string
+          view_url?: string | null
           year?: string
         }
         Relationships: []
