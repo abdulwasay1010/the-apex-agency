@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AdminPageHeader,
@@ -22,6 +22,9 @@ type Project = {
   accent: string;
   sort_order: number;
   published: boolean;
+  category: string;
+  image_url: string | null;
+  view_url: string | null;
 };
 
 export const Route = createFileRoute("/admin/work")({
