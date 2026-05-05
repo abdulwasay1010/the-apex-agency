@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 
 export const Route = createFileRoute("/services")({
   head: () => ({
@@ -35,12 +36,19 @@ function ServicesPage() {
   const [services, setServices] = useState<ServiceRow[]>([]);
 
   useEffect(() => {
-    void supabase
-      .from("services")
-      .select("id, number, title, description, items")
-      .eq("published", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => setServices((data ?? []) as ServiceRow[]));
+    const q = query(
+      collection(getDb(), "services"),
+      where("published", "==", true),
+      orderBy("sort_order", "asc"),
+    );
+    void getDocs(q).then((snap) => {
+      setServices(
+        snap.docs.map((d) => {
+          const x = d.data() as Omit<ServiceRow, "id">;
+          return { id: d.id, number: x.number, title: x.title, description: x.description, items: x.items ?? [] };
+        }),
+      );
+    });
   }, []);
 
   const root = useGsap<HTMLDivElement>((_, el) => {

@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -32,12 +33,19 @@ function AboutPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
 
   useEffect(() => {
-    void supabase
-      .from("team_members")
-      .select("id, name, role")
-      .eq("published", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => setTeam((data ?? []) as TeamMember[]));
+    const q = query(
+      collection(getDb(), "team_members"),
+      where("published", "==", true),
+      orderBy("sort_order", "asc"),
+    );
+    void getDocs(q).then((snap) => {
+      setTeam(
+        snap.docs.map((d) => {
+          const x = d.data() as Omit<TeamMember, "id">;
+          return { id: d.id, name: x.name, role: x.role };
+        }),
+      );
+    });
   }, []);
 
   const root = useGsap<HTMLDivElement>((_, el) => {

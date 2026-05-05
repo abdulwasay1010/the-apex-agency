@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Eye } from "lucide-react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 
 export const Route = createFileRoute("/work")({
   head: () => ({
@@ -40,12 +41,30 @@ function WorkPage() {
   const [active, setActive] = useState<string>(ALL);
 
   useEffect(() => {
-    void supabase
-      .from("projects")
-      .select("id, number, title, tag, year, summary, accent, category, image_url, view_url")
-      .eq("published", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => setProjects((data ?? []) as ProjectRow[]));
+    const q = query(
+      collection(getDb(), "projects"),
+      where("published", "==", true),
+      orderBy("sort_order", "asc"),
+    );
+    void getDocs(q).then((snap) => {
+      setProjects(
+        snap.docs.map((d) => {
+          const x = d.data() as Omit<ProjectRow, "id">;
+          return {
+            id: d.id,
+            number: x.number,
+            title: x.title,
+            tag: x.tag,
+            year: x.year,
+            summary: x.summary,
+            accent: x.accent,
+            category: x.category,
+            image_url: x.image_url ?? null,
+            view_url: x.view_url ?? null,
+          };
+        }),
+      );
+    });
   }, []);
 
   const categories = useMemo(() => {

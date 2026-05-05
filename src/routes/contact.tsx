@@ -3,7 +3,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowUpRight, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
 
@@ -59,21 +60,22 @@ function ContactPage() {
     }
 
     setLoading(true);
-    const { error } = await supabase.from("contact_submissions").insert({
-      name: parsed.data.name,
-      email: parsed.data.email,
-      company: parsed.data.company ?? null,
-      message: parsed.data.message,
-    });
-    setLoading(false);
-
-    if (error) {
+    try {
+      await addDoc(collection(getDb(), "contact_submissions"), {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        company: parsed.data.company ?? null,
+        message: parsed.data.message,
+        created_at: serverTimestamp(),
+      });
+      setSent(true);
+      toast.success("Message received. We'll be in touch soon.");
+      (e.target as HTMLFormElement).reset();
+    } catch {
       toast.error("Couldn't send your message. Please try again.");
-      return;
+    } finally {
+      setLoading(false);
     }
-    setSent(true);
-    toast.success("Message received. We'll be in touch soon.");
-    (e.target as HTMLFormElement).reset();
   }
 
   return (
