@@ -2,7 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+} from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 import {
   AdminPageHeader,
   AdminInput,
@@ -29,12 +39,14 @@ function TeamAdmin() {
   const [creating, setCreating] = useState(false);
 
   async function load() {
-    const { data, error } = await supabase
-      .from("team_members")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    if (error) toast.error(error.message);
-    setRows(data ?? []);
+    try {
+      const q = query(collection(getDb(), "team_members"), orderBy("sort_order", "asc"));
+      const snap = await getDocs(q);
+      setRows(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Member, "id">) })));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+      setRows([]);
+    }
   }
   useEffect(() => {
     void load();
@@ -42,11 +54,12 @@ function TeamAdmin() {
 
   async function remove(id: string) {
     if (!confirm("Remove this team member?")) return;
-    const { error } = await supabase.from("team_members").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await deleteDoc(doc(getDb(), "team_members", id));
       toast.success("Member removed.");
       void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
     }
   }
 
@@ -150,14 +163,19 @@ function MemberFormModal({
       published: fd.get("published") === "on",
     };
     setBusy(true);
-    const { error } = initial
-      ? await supabase.from("team_members").update(payload).eq("id", initial.id)
-      : await supabase.from("team_members").insert(payload);
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else {
-      toast.success(initial ? "Member updated." : "Member added.");
+    try {
+      if (initial) {
+        await updateDoc(doc(getDb(), "team_members", initial.id), payload);
+        toast.success("Member updated.");
+      } else {
+        await addDoc(collection(getDb(), "team_members"), payload);
+        toast.success("Member added.");
+      }
       onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
     }
   }
 

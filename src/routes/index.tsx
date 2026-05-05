@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, ArrowRight } from "lucide-react";
 import { useGsap } from "@/lib/useGsap";
 import { gsap } from "gsap";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,13 +40,20 @@ function HomePage() {
   const [services, setServices] = useState<ServicePreview[]>([]);
 
   useEffect(() => {
-    void supabase
-      .from("services")
-      .select("id, number, title, description")
-      .eq("published", true)
-      .order("sort_order", { ascending: true })
-      .limit(4)
-      .then(({ data }) => setServices((data ?? []) as ServicePreview[]));
+    const q = query(
+      collection(getDb(), "services"),
+      where("published", "==", true),
+      orderBy("sort_order", "asc"),
+      limit(4),
+    );
+    void getDocs(q).then((snap) => {
+      setServices(
+        snap.docs.map((d) => {
+          const x = d.data() as Omit<ServicePreview, "id">;
+          return { id: d.id, number: x.number, title: x.title, description: x.description };
+        }),
+      );
+    });
   }, []);
 
   const root = useGsap<HTMLDivElement>((_, el) => {
@@ -55,39 +63,16 @@ function HomePage() {
       duration: 1,
       stagger: 0.08,
     })
-      .from(
-        el.querySelector(".hero-eyebrow"),
-        { opacity: 0, y: 20, duration: 0.6 },
-        "-=0.7"
-      )
-      .from(
-        el.querySelector(".hero-sub"),
-        { opacity: 0, y: 20, duration: 0.7 },
-        "-=0.5"
-      )
-      .from(
-        el.querySelector(".hero-cta"),
-        { opacity: 0, y: 20, duration: 0.5 },
-        "-=0.4"
-      )
-      .from(
-        el.querySelectorAll(".stat"),
-        { opacity: 0, y: 30, duration: 0.6, stagger: 0.08 },
-        "-=0.2"
-      );
+      .from(el.querySelector(".hero-eyebrow"), { opacity: 0, y: 20, duration: 0.6 }, "-=0.7")
+      .from(el.querySelector(".hero-sub"), { opacity: 0, y: 20, duration: 0.7 }, "-=0.5")
+      .from(el.querySelector(".hero-cta"), { opacity: 0, y: 20, duration: 0.5 }, "-=0.4")
+      .from(el.querySelectorAll(".stat"), { opacity: 0, y: 30, duration: 0.6, stagger: 0.08 }, "-=0.2");
 
-    // Marquee
     const marquee = el.querySelector(".marquee-track");
     if (marquee) {
-      gsap.to(marquee, {
-        xPercent: -50,
-        duration: 30,
-        ease: "none",
-        repeat: -1,
-      });
+      gsap.to(marquee, { xPercent: -50, duration: 30, ease: "none", repeat: -1 });
     }
 
-    // Service cards on enter
     gsap.from(el.querySelectorAll(".svc-card"), {
       opacity: 0,
       y: 60,
@@ -106,7 +91,6 @@ function HomePage() {
 
   return (
     <div ref={root}>
-      {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="grid-bg absolute inset-0 opacity-40" />
         <div className="absolute inset-0 bg-gradient-radial" />
@@ -156,7 +140,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Marquee */}
       <section className="border-y border-border bg-card/30 py-8 overflow-hidden">
         <div className="marquee-track flex w-max gap-16 whitespace-nowrap font-mono text-sm uppercase tracking-[0.3em] text-muted-foreground">
           {[...clients, ...clients, ...clients, ...clients].map((c, i) => (
@@ -168,7 +151,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Services */}
       <section id="services" className="mx-auto max-w-7xl px-6 py-32">
         <div className="grid gap-12 md:grid-cols-[1fr_2fr]">
           <div className="md:sticky md:top-32 md:self-start">
@@ -195,7 +177,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
       <section id="cta" className="mx-auto max-w-7xl px-6 pb-16">
         <div className="cta-reveal relative overflow-hidden rounded-2xl border border-border bg-card p-12 md:p-20">
           <div className="absolute inset-0 bg-gradient-radial opacity-60" />

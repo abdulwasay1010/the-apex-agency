@@ -2,7 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Loader2, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+} from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 import {
   AdminPageHeader,
   AdminInput,
@@ -31,12 +41,19 @@ function ServicesAdmin() {
   const [creating, setCreating] = useState(false);
 
   async function load() {
-    const { data, error } = await supabase
-      .from("services")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    if (error) toast.error(error.message);
-    setRows(data ?? []);
+    try {
+      const q = query(collection(getDb(), "services"), orderBy("sort_order", "asc"));
+      const snap = await getDocs(q);
+      setRows(
+        snap.docs.map((d) => {
+          const x = d.data() as Omit<Service, "id">;
+          return { id: d.id, ...x, items: x.items ?? [] };
+        }),
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load");
+      setRows([]);
+    }
   }
 
   useEffect(() => {
@@ -45,11 +62,12 @@ function ServicesAdmin() {
 
   async function remove(id: string) {
     if (!confirm("Delete this service?")) return;
-    const { error } = await supabase.from("services").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await deleteDoc(doc(getDb(), "services", id));
       toast.success("Service deleted.");
       void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
     }
   }
 
@@ -161,15 +179,19 @@ function ServiceFormModal({
     };
 
     setBusy(true);
-    const { error } = initial
-      ? await supabase.from("services").update(payload).eq("id", initial.id)
-      : await supabase.from("services").insert(payload);
-    setBusy(false);
-
-    if (error) toast.error(error.message);
-    else {
-      toast.success(initial ? "Service updated." : "Service created.");
+    try {
+      if (initial) {
+        await updateDoc(doc(getDb(), "services", initial.id), payload);
+        toast.success("Service updated.");
+      } else {
+        await addDoc(collection(getDb(), "services"), payload);
+        toast.success("Service created.");
+      }
       onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -214,11 +236,11 @@ export function Modal({
       <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 elegant-shadow">
         <div className="flex items-center justify-between border-b border-border pb-4">
           <h2 className="font-display text-xl font-semibold">{title}</h2>
-          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-secondary">
-            <X className="h-4 w-4" />
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="mt-6">{children}</div>
+        <div className="mt-6 max-h-[70vh] overflow-y-auto pr-1">{children}</div>
       </div>
     </div>
   );
@@ -238,16 +260,16 @@ export function FormFooter({
       <button
         type="button"
         onClick={onClose}
-        className="rounded-full border border-border px-5 py-2 text-sm hover:border-primary/60"
+        className="rounded-md border border-border px-4 py-2 text-sm hover:border-primary/60"
       >
         Cancel
       </button>
       <button
         type="submit"
         disabled={busy}
-        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
       >
-        {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+        {busy && <Loader2 className="h-3 w-3 animate-spin" />}
         {editing ? "Save changes" : "Create"}
       </button>
     </div>
@@ -257,12 +279,12 @@ export function FormFooter({
 export function Badge({ on }: { on: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${
-        on ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+        on ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${on ? "bg-primary" : "bg-muted-foreground"}`} />
-      {on ? "Live" : "Draft"}
+      {on ? "Published" : "Draft"}
     </span>
   );
 }
