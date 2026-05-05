@@ -138,7 +138,7 @@ function HomePage() {
               to="/work"
               className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground transition-all hover:border-primary/60"
             >
-              See selected work
+              See work
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
