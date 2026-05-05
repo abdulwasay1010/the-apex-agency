@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash2, Loader2, Mail } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  Timestamp,
+} from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 import { AdminPageHeader, EmptyState } from "@/components/admin/AdminUI";
 
 type Submission = {
@@ -11,7 +20,7 @@ type Submission = {
   email: string;
   company: string | null;
   message: string;
-  created_at: string;
+  created_at: Date | null;
 };
 
 export const Route = createFileRoute("/admin/inbox")({
@@ -22,12 +31,27 @@ function InboxAdmin() {
   const [rows, setRows] = useState<Submission[] | null>(null);
 
   async function load() {
-    const { data, error } = await supabase
-      .from("contact_submissions")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    setRows(data ?? []);
+    try {
+      const q = query(collection(getDb(), "contact_submissions"), orderBy("created_at", "desc"));
+      const snap = await getDocs(q);
+      setRows(
+        snap.docs.map((d) => {
+          const x = d.data() as Record<string, unknown>;
+          const ts = x.created_at;
+          return {
+            id: d.id,
+            name: String(x.name ?? ""),
+            email: String(x.email ?? ""),
+            company: (x.company as string | null) ?? null,
+            message: String(x.message ?? ""),
+            created_at: ts instanceof Timestamp ? ts.toDate() : null,
+          };
+        }),
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+      setRows([]);
+    }
   }
   useEffect(() => {
     void load();
@@ -35,11 +59,12 @@ function InboxAdmin() {
 
   async function remove(id: string) {
     if (!confirm("Delete this message?")) return;
-    const { error } = await supabase.from("contact_submissions").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await deleteDoc(doc(getDb(), "contact_submissions", id));
       toast.success("Message deleted.");
       void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
     }
   }
 
@@ -72,7 +97,7 @@ function InboxAdmin() {
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <span className="font-mono text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleString()}
+                    {r.created_at ? r.created_at.toLocaleString() : ""}
                   </span>
                   <button
                     onClick={() => remove(r.id)}

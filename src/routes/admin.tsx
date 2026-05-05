@@ -1,8 +1,9 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Loader2, LayoutGrid, Briefcase, Users, Inbox, LogOut, ExternalLink } from "lucide-react";
+import { signOut } from "firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { getFirebaseAuth } from "@/integrations/firebase/client";
 import { Logo } from "@/components/site/Logo";
 
 export const Route = createFileRoute("/admin")({
@@ -29,14 +30,15 @@ function AdminLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (loading) return;
-    if (!session) navigate({ to: "/auth" });
+    if (!loading && !session) {
+      navigate({ to: "/auth" });
+    }
   }, [loading, session, navigate]);
 
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -48,12 +50,11 @@ function AdminLayout() {
       <div className="mx-auto max-w-lg px-6 py-32 text-center">
         <h1 className="font-display text-3xl font-semibold">Access denied</h1>
         <p className="mt-3 text-muted-foreground">
-          Your account doesn&apos;t have admin access. Ask a studio admin to grant the
-          <code className="mx-1 rounded bg-muted px-1.5 py-0.5 font-mono text-xs">admin</code>
-          role to <span className="font-mono">{user?.email}</span>.
+          Your account doesn&apos;t have admin access. Contact a studio admin.
+          <span className="mx-1 font-mono">{user?.email}</span>
         </p>
         <button
-          onClick={() => supabase.auth.signOut()}
+          onClick={() => signOut(getFirebaseAuth())}
           className="mt-8 inline-flex items-center gap-2 rounded-full border border-border px-5 py-2 text-sm hover:border-primary/60"
         >
           <LogOut className="h-4 w-4" /> Sign out
@@ -94,7 +95,7 @@ function AdminLayout() {
               <ExternalLink className="h-4 w-4" /> View site
             </Link>
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => signOut(getFirebaseAuth())}
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
             >
               <LogOut className="h-4 w-4" /> Sign out

@@ -2,7 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Loader2, Upload } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+} from "firebase/firestore";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getDb, getFirebaseStorage } from "@/integrations/firebase/client";
 import {
   AdminPageHeader,
   AdminInput,
@@ -37,12 +48,14 @@ function WorkAdmin() {
   const [creating, setCreating] = useState(false);
 
   async function load() {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .order("sort_order", { ascending: true });
-    if (error) toast.error(error.message);
-    setRows(data ?? []);
+    try {
+      const q = query(collection(getDb(), "projects"), orderBy("sort_order", "asc"));
+      const snap = await getDocs(q);
+      setRows(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Project, "id">) })));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+      setRows([]);
+    }
   }
   useEffect(() => {
     void load();
@@ -50,11 +63,12 @@ function WorkAdmin() {
 
   async function remove(id: string) {
     if (!confirm("Delete this project?")) return;
-    const { error } = await supabase.from("projects").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await deleteDoc(doc(getDb(), "projects", id));
       toast.success("Project deleted.");
       void load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
     }
   }
 
@@ -164,20 +178,19 @@ function ProjectFormModal({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("project-images").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      const { data } = supabase.storage.from("project-images").getPublicUrl(path);
-      setImageUrl(data.publicUrl);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `project-images/${crypto.randomUUID()}.${ext}`;
+      const r = storageRef(getFirebaseStorage(), path);
+      await uploadBytes(r, file);
+      const url = await getDownloadURL(r);
+      setImageUrl(url);
       toast.success("Image uploaded.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -198,15 +211,19 @@ function ProjectFormModal({
     };
 
     setBusy(true);
-    const { error } = initial
-      ? await supabase.from("projects").update(payload).eq("id", initial.id)
-      : await supabase.from("projects").insert(payload);
-    setBusy(false);
-
-    if (error) toast.error(error.message);
-    else {
-      toast.success(initial ? "Project updated." : "Project created.");
+    try {
+      if (initial) {
+        await updateDoc(doc(getDb(), "projects", initial.id), payload);
+        toast.success("Project updated.");
+      } else {
+        await addDoc(collection(getDb(), "projects"), payload);
+        toast.success("Project created.");
+      }
       onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
     }
   }
 

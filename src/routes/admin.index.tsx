@@ -1,18 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { LayoutGrid, Briefcase, Users, Inbox } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getCountFromServer } from "firebase/firestore";
+import { getDb } from "@/integrations/firebase/client";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminOverview,
 });
 
 const cards = [
-  { to: "/admin/services", label: "Services", icon: LayoutGrid, table: "services" as const },
-  { to: "/admin/work", label: "Projects", icon: Briefcase, table: "projects" as const },
-  { to: "/admin/team", label: "Team members", icon: Users, table: "team_members" as const },
-  { to: "/admin/inbox", label: "Inbox", icon: Inbox, table: "contact_submissions" as const },
-];
+  { to: "/admin/services", label: "Services", icon: LayoutGrid, table: "services" },
+  { to: "/admin/work", label: "Projects", icon: Briefcase, table: "projects" },
+  { to: "/admin/team", label: "Team members", icon: Users, table: "team_members" },
+  { to: "/admin/inbox", label: "Inbox", icon: Inbox, table: "contact_submissions" },
+] as const;
 
 function AdminOverview() {
   const [counts, setCounts] = useState<Record<string, number | null>>({});
@@ -20,9 +21,13 @@ function AdminOverview() {
   useEffect(() => {
     void Promise.all(
       cards.map(async (c) => {
-        const { count } = await supabase.from(c.table).select("*", { count: "exact", head: true });
-        return [c.table, count ?? 0] as const;
-      })
+        try {
+          const snap = await getCountFromServer(collection(getDb(), c.table));
+          return [c.table, snap.data().count] as const;
+        } catch {
+          return [c.table, 0] as const;
+        }
+      }),
     ).then((rows) => setCounts(Object.fromEntries(rows)));
   }, []);
 
